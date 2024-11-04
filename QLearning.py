@@ -15,16 +15,17 @@ class QLearning:
         self.epsilon_min = epsilon_min
         self.epsilon_dec = epsilon_dec
         self.episodes = episodes
+        self.actions_per_episode = []  # Inicializar o atributo no construtor
 
     def select_action(self, state):
         rv = random.uniform(0, 1)
         if rv < self.epsilon:
-            return self.env.action_space.sample() # Explore action space
-        return np.argmax(self.q_table[state]) # Exploit learned values
+            return self.env.action_space.sample()  # Explore action space
+        return np.argmax(self.q_table[state])  # Exploit learned values
 
     def train(self, filename, plotFile):
         actions_per_episode = []
-        for i in range(1, self.episodes+1):
+        for i in range(1, self.episodes + 1):
             (state, _) = self.env.reset()
             rewards = 0
             done = False
@@ -33,26 +34,33 @@ class QLearning:
             while not done:
                 action = self.select_action(state)
                 next_state, reward, done, truncated, _ = self.env.step(action) 
-        
+
                 old_value = self.q_table[state, action]
                 next_max = np.max(self.q_table[next_state])
                 new_value = old_value + self.alpha * (reward + self.gamma * next_max - old_value)
                 self.q_table[state, action] = new_value
 
                 state = next_state
-                actions=actions+1
-                rewards=rewards+reward
+                actions += 1
+                rewards += reward
 
             actions_per_episode.append(actions)
+
             if i % 100 == 0:
-                sys.stdout.write("Episodes: " + str(i) +'\r')
+                sys.stdout.write("Episodes: " + str(i) + '\r')
                 sys.stdout.flush()
-            
+
             if self.epsilon > self.epsilon_min:
                 self.epsilon = self.epsilon * self.epsilon_dec
 
+        # Salva as ações por episódio no atributo da instância
+        self.actions_per_episode = actions_per_episode
+
+        # Salvar a Q-table em um arquivo CSV
         savetxt(filename, self.q_table, delimiter=',')
-        if (plotFile is not None): self.plotactions(plotFile, actions_per_episode)
+        if plotFile is not None:
+            self.plotactions(plotFile, actions_per_episode)
+
         return self.q_table
 
     def plotactions(self, plotFile, actions_per_episode):
@@ -60,5 +68,5 @@ class QLearning:
         plt.xlabel('Episodes')
         plt.ylabel('# Actions')
         plt.title('# Actions vs Episodes')
-        plt.savefig(plotFile+".jpg")     
+        plt.savefig(plotFile + ".jpg")     
         plt.close()
